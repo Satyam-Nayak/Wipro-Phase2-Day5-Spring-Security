@@ -3,45 +3,227 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>User Home - Spring Boot Security Tutorial</title>
+  <title>User Dashboard - Job Applications</title>
   <style>
     body {
-      font-family: 'Arial', sans-serif;
-      background-color: #3cd9e7;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      color: #fff;
+        font-family: 'Arial', sans-serif;
+        background-color: #3cd9e7;
+        margin: 0;
+        padding: 20px;
+        text-align: center;
+        color: #fff;
     }
 
     .container {
-      text-align: center;
-      background-color: #2299a4;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      max-width: 400px;
-      width: 100%;
+        background-color: #2299a4;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        max-width: 700px;
+        margin: auto;
     }
 
-    h1 {
-      color: #ffffff;
+    h1, h2 {
+        color: #fff;
     }
 
-    p {
-      font-size: 18px;
-      margin-bottom: 20px;
+    table {
+        width: 100%;
+        margin-top: 20px;
+        border-collapse: collapse;
+        background-color: white;
+        color: black;
     }
 
+    th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: center;
+    }
+
+    .apply-btn {
+        background-color: green;
+        color: white;
+        padding: 5px 10px;
+        border: none;
+        cursor: pointer;
+    }
+
+    .withdraw-btn {
+        background-color: red;
+        color: white;
+        padding: 5px 10px;
+        border: none;
+        cursor: pointer;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    input, button {
+        margin: 5px;
+        padding: 8px;
+        width: 80%;
+    }
+
+    form {
+        background: white;
+        padding: 10px;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 20px;
+    }
   </style>
 </head>
 <body>
+
 <div class="container">
   <h1>Welcome, User!</h1>
-  <p>This is the user home page. Explore and access your user-specific features.</p>
+
+  <h2>Available Jobs</h2>
+  <table>
+    <thead>
+    <tr>
+      <th>ID</th>
+      <th>Job Title</th>
+      <th>Salary</th>
+      <th>Location</th>
+      <th>Action</th>
+    </tr>
+    </thead>
+    <tbody id="jobTableBody">
+    <!-- Jobs will be loaded dynamically -->
+    </tbody>
+  </table>
+
+  <h2>Apply for a Job</h2>
+  <form id="applyForm" class="hidden">
+    <input type="hidden" id="jobId">
+    <input type="text" id="userName" placeholder="Your Name" required>
+    <input type="email" id="userEmail" placeholder="Your Email" required>
+    <button type="submit">Apply</button>
+  </form>
+
+  <h2>Applied Jobs</h2>
+  <table>
+    <thead>
+    <tr>
+      <th>Job ID</th>
+      <th>Job Title</th>
+      <th>Action</th>
+    </tr>
+    </thead>
+    <tbody id="appliedJobTableBody">
+    <!-- Applied jobs will be loaded dynamically -->
+    </tbody>
+  </table>
 </div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+      fetchJobs();
+  });
+
+  async function fetchJobs() {
+      try {
+          const response = await fetch("/user/jobs");
+          const jobs = await response.json();
+          const jobTableBody = document.getElementById("jobTableBody");
+          jobTableBody.innerHTML = "";
+
+          jobs.forEach(job => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                  <td>${job.id}</td>
+                  <td>${job.jobTitle}</td>
+                  <td>${job.salary}</td>
+                  <td>${job.location}</td>
+                  <td>
+                      <button class="apply-btn" onclick="openApplyForm(${job.id}, '${job.jobTitle}')">Apply</button>
+                  </td>
+              `;
+              jobTableBody.appendChild(row);
+          });
+      } catch (error) {
+          console.error("Error fetching jobs:", error);
+      }
+  }
+
+  function openApplyForm(jobId, jobTitle) {
+      document.getElementById("jobId").value = jobId;
+      document.getElementById("applyForm").classList.remove("hidden");
+  }
+
+  document.getElementById("applyForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      const applicationData = {
+          jobId: document.getElementById("jobId").value,
+          userName: document.getElementById("userName").value,
+          userEmail: document.getElementById("userEmail").value
+      };
+
+      try {
+          const response = await fetch("/user/apply", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(applicationData)
+          });
+
+          if (response.ok) {
+              alert("Successfully applied for the job!");
+              fetchAppliedJobs(applicationData.userEmail);
+              document.getElementById("applyForm").reset();
+              document.getElementById("applyForm").classList.add("hidden");
+          } else {
+              alert("Application failed.");
+          }
+      } catch (error) {
+          console.error("Error applying for job:", error);
+      }
+  });
+
+  async function fetchAppliedJobs(email) {
+      try {
+          const response = await fetch(`/user/applications/${email}`);
+          const appliedJobs = await response.json();
+          const appliedJobTableBody = document.getElementById("appliedJobTableBody");
+          appliedJobTableBody.innerHTML = "";
+
+          appliedJobs.forEach(job => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                  <td>${job.jobId}</td>
+                  <td>${job.jobTitle}</td>
+                  <td>
+                      <button class="withdraw-btn" onclick="withdrawApplication(${job.jobId}, '${email}')">Withdraw</button>
+                  </td>
+              `;
+              appliedJobTableBody.appendChild(row);
+          });
+      } catch (error) {
+          console.error("Error fetching applied jobs:", error);
+      }
+  }
+
+  async function withdrawApplication(jobId, email) {
+      try {
+          const response = await fetch(`/user/withdraw/${jobId}`, { method: "DELETE" });
+
+          if (response.ok) {
+              alert("Application withdrawn successfully!");
+              fetchAppliedJobs(email);
+          } else {
+              alert("Failed to withdraw application.");
+          }
+      } catch (error) {
+          console.error("Error withdrawing application:", error);
+      }
+  }
+</script>
+
 </body>
 </html>

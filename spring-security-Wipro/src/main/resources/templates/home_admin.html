@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Home - Spring Boot Security Tutorial</title>
+  <title>Admin Dashboard - Job Management</title>
   <style>
     body {
       font-family: 'Arial', sans-serif;
@@ -11,6 +11,7 @@
       margin: 0;
       padding: 0;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       height: 100vh;
@@ -23,7 +24,7 @@
       padding: 20px;
       border-radius: 8px;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      max-width: 400px;
+      max-width: 600px;
       width: 100%;
     }
 
@@ -31,17 +32,147 @@
       color: #ffffff;
     }
 
-    p {
-      font-size: 18px;
-      margin-bottom: 20px;
+    form {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
+    input, button {
+      margin: 5px;
+      padding: 8px;
+      width: 80%;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid #fff;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .actions button {
+      margin: 3px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+
+    .delete-btn {
+      background-color: red;
+      color: white;
+    }
+
+    .edit-btn {
+      background-color: yellow;
+      color: black;
+    }
   </style>
 </head>
 <body>
+
 <div class="container">
-  <h1>Welcome, Admin!</h1>
-  <p>This is the admin home page. Explore and manage your admin functionalities.</p>
+  <h1>Admin Dashboard</h1>
+
+  <h2>Create Job</h2>
+  <form id="jobForm">
+    <input type="text" id="jobTitle" placeholder="Job Title" required>
+    <input type="text" id="salary" placeholder="Salary Package" required>
+    <input type="text" id="location" placeholder="Job Location" required>
+    <button type="submit">Create Job</button>
+  </form>
+
+  <h2>Job Listings</h2>
+  <table>
+    <thead>
+    <tr>
+      <th>ID</th>
+      <th>Job Title</th>
+      <th>Salary</th>
+      <th>Location</th>
+      <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody id="jobTableBody">
+    <!-- Jobs will be loaded dynamically -->
+    </tbody>
+  </table>
 </div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    fetchJobs();
+  });
+
+  document.getElementById("jobForm").addEventListener("submit", function (event) {
+    event.preventDefault();
+
+    const jobData = {
+      jobTitle: document.getElementById("jobTitle").value,
+      salary: document.getElementById("salary").value,
+      location: document.getElementById("location").value
+    };
+
+    fetch("/admin/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(jobData)
+    })
+    .then(response => response.json())
+    .then(() => {
+      fetchJobs(); // Refresh job list
+      document.getElementById("jobForm").reset();
+    });
+  });
+
+  function fetchJobs() {
+    fetch("/admin/jobs")
+      .then(response => response.json())
+      .then(data => {
+        const jobTableBody = document.getElementById("jobTableBody");
+        jobTableBody.innerHTML = "";
+
+        data.forEach(job => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${job.id}</td>
+            <td>${job.jobTitle}</td>
+            <td>${job.salary}</td>
+            <td>${job.location}</td>
+            <td class="actions">
+              <button class="edit-btn" onclick="editJob(${job.id})">Edit</button>
+              <button class="delete-btn" onclick="deleteJob(${job.id})">Delete</button>
+            </td>
+          `;
+          jobTableBody.appendChild(row);
+        });
+      });
+  }
+
+  function deleteJob(jobId) {
+    fetch(`/admin/jobs/${jobId}`, { method: "DELETE" })
+      .then(() => fetchJobs());
+  }
+
+  function editJob(jobId) {
+    const newTitle = prompt("Enter new Job Title:");
+    const newSalary = prompt("Enter new Salary Package:");
+    const newLocation = prompt("Enter new Job Location:");
+
+    if (newTitle && newSalary && newLocation) {
+      fetch(`/admin/jobs/${jobId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobTitle: newTitle, salary: newSalary, location: newLocation })
+      })
+      .then(() => fetchJobs());
+    }
+  }
+</script>
+
 </body>
 </html>
