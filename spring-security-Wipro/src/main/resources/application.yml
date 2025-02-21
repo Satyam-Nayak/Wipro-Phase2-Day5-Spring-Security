@@ -1,0 +1,13 @@
+server:
+  port: 9091
+spring:
+  application:
+    name: Wipro-Security
+  datasource:
+    url: jdbc:mysql://localhost:3306/satyamnayakspringsecurity
+    username: root
+    password: SatyamN.26.
+  jpa:
+    hibernate:
+      ddl-auto: update
+      show-sql: true
