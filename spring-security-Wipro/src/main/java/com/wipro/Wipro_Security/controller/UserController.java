@@ -9,42 +9,47 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/user")
 public class UserController {
 
     @Autowired
-    private JobRepository jobRepository; // 🔹 Fix: Added jobRepository
+    private JobRepository jobRepository;
 
     @Autowired
     private JobApplicationService jobApplicationService;
 
-    // 🔹 Fetch all available jobs
+    // 🔹 Fetch all jobs
     @GetMapping("/jobs")
     public ResponseEntity<List<Job>> getAllJobs() {
-        List<Job> jobs = jobRepository.findAll();
-        return ResponseEntity.ok(jobs);
+        return ResponseEntity.ok(jobRepository.findAll());
     }
 
-    // 🔹 Fetch job applications for a specific user (by email)
+    // 🔹 Fetch user applications by email
     @GetMapping("/applications/{email}")
     public ResponseEntity<List<JobApplication>> getUserApplications(@PathVariable String email) {
-        List<JobApplication> applications = jobApplicationService.getUserApplications(email);
-        return ResponseEntity.ok(applications);
+        return ResponseEntity.ok(jobApplicationService.getUserApplications(email));
     }
 
-    // 🔹 Apply for a job
+    // 🔹 Apply for a job (fixing the issue)
     @PostMapping("/apply")
-    public ResponseEntity<JobApplication> applyForJob(@RequestBody JobApplication application) {
-        JobApplication savedApplication = jobApplicationService.applyForJob(application);
-        return ResponseEntity.ok(savedApplication);
+    public ResponseEntity<String> applyForJob(@RequestBody JobApplication application) {
+        Optional<Job> jobOptional = jobRepository.findById(application.getJob().getId());
+
+        if (jobOptional.isPresent()) {
+            JobApplication savedApplication = jobApplicationService.applyForJob(application.getName(), application.getEmail(), jobOptional.get());
+            return ResponseEntity.ok("Application submitted successfully!");
+        } else {
+            return ResponseEntity.badRequest().body("Invalid Job ID!");
+        }
     }
 
-    // 🔹 Withdraw a job application
-    @DeleteMapping("/withdraw/{id}")
-    public ResponseEntity<String> withdrawApplication(@PathVariable int id) {
-        jobApplicationService.withdrawApplication(id);
-        return ResponseEntity.ok("Application withdrawn successfully.");
+    // 🔹 Withdraw application
+    @DeleteMapping("/withdraw/{jobId}/{email}")
+    public ResponseEntity<String> withdrawApplication(@PathVariable int jobId, @PathVariable String email) {
+        boolean removed = jobApplicationService.withdrawApplication(jobId, email);
+        return removed ? ResponseEntity.ok("Application withdrawn.") : ResponseEntity.badRequest().body("No application found!");
     }
 }

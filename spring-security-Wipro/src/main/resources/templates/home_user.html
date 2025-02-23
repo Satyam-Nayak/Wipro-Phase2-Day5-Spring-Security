@@ -19,7 +19,7 @@
         padding: 20px;
         border-radius: 8px;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        max-width: 700px;
+        max-width: 800px;
         margin: auto;
     }
 
@@ -41,21 +41,16 @@
         text-align: center;
     }
 
-    .apply-btn {
-        background-color: green;
-        color: white;
+    .apply-btn, .withdraw-btn {
         padding: 5px 10px;
         border: none;
         cursor: pointer;
+        color: white;
+        font-weight: bold;
     }
 
-    .withdraw-btn {
-        background-color: red;
-        color: white;
-        padding: 5px 10px;
-        border: none;
-        cursor: pointer;
-    }
+    .apply-btn { background-color: green; }
+    .withdraw-btn { background-color: red; }
 
     .hidden {
         display: none;
@@ -125,6 +120,7 @@
 <script>
   document.addEventListener("DOMContentLoaded", function () {
       fetchJobs();
+      fetchAppliedJobs();
   });
 
   async function fetchJobs() {
@@ -160,10 +156,14 @@
   document.getElementById("applyForm").addEventListener("submit", async function (event) {
       event.preventDefault();
 
+      const jobId = document.getElementById("jobId").value;
+      const userName = document.getElementById("userName").value;
+      const userEmail = document.getElementById("userEmail").value;
+
       const applicationData = {
-          jobId: document.getElementById("jobId").value,
-          userName: document.getElementById("userName").value,
-          userEmail: document.getElementById("userEmail").value
+          job: { id: jobId },
+          name: userName,
+          email: userEmail
       };
 
       try {
@@ -175,7 +175,7 @@
 
           if (response.ok) {
               alert("Successfully applied for the job!");
-              fetchAppliedJobs(applicationData.userEmail);
+              fetchAppliedJobs();
               document.getElementById("applyForm").reset();
               document.getElementById("applyForm").classList.add("hidden");
           } else {
@@ -186,9 +186,12 @@
       }
   });
 
-  async function fetchAppliedJobs(email) {
+  async function fetchAppliedJobs() {
       try {
-          const response = await fetch(`/user/applications/${email}`);
+          const userEmail = document.getElementById("userEmail").value;
+          if (!userEmail) return;
+
+          const response = await fetch(`/user/applications/${userEmail}`);
           const appliedJobs = await response.json();
           const appliedJobTableBody = document.getElementById("appliedJobTableBody");
           appliedJobTableBody.innerHTML = "";
@@ -196,10 +199,10 @@
           appliedJobs.forEach(job => {
               const row = document.createElement("tr");
               row.innerHTML = `
-                  <td>${job.jobId}</td>
-                  <td>${job.jobTitle}</td>
+                  <td>${job.job.id}</td>
+                  <td>${job.job.jobTitle}</td>
                   <td>
-                      <button class="withdraw-btn" onclick="withdrawApplication(${job.jobId}, '${email}')">Withdraw</button>
+                      <button class="withdraw-btn" onclick="withdrawApplication(${job.id}, '${userEmail}')">Withdraw</button>
                   </td>
               `;
               appliedJobTableBody.appendChild(row);
@@ -209,9 +212,9 @@
       }
   }
 
-  async function withdrawApplication(jobId, email) {
+  async function withdrawApplication(applicationId, email) {
       try {
-          const response = await fetch(`/user/withdraw/${jobId}`, { method: "DELETE" });
+          const response = await fetch(`/user/withdraw/${applicationId}`, { method: "DELETE" });
 
           if (response.ok) {
               alert("Application withdrawn successfully!");
