@@ -10,14 +10,17 @@ public class SpringController {
     public String hello(){
         return "home";
     }
+
     @GetMapping("/user/home")
     public String user(){
         return "home_user";
     }
+
     @GetMapping("/admin/home")
     public String admin(){
         return "home_admin";
     }
+
     @GetMapping("/login")
     public String handleLogin() {
         return "custom_login";
